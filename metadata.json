@@ -1,0 +1,6 @@
+{
+  "name": "AI Customer Voice & Product Insights",
+  "description": "Executive-grade customer feedback analytics platform that turns raw user reviews into strategic business insights, prioritized product roadmaps, and technology opportunities using Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
