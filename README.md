@@ -169,6 +169,16 @@ npm run build
 npm start
 ```
 
+### Deploying to Vercel
+
+This repository is pre-configured for zero-friction Vercel deployment:
+
+1. **Push your repository** to GitHub or GitLab.
+2. **Import the project** in the [Vercel Dashboard](https://vercel.com/new).
+3. **Framework Preset**: Vercel will automatically detect `Vite` (Build Command: `vite build`, Output Directory: `dist`).
+4. **Environment Variables**: Add your `GEMINI_API_KEY` in **Settings > Environment Variables**.
+5. **Deploy**: Click **Deploy**. Vercel will build the frontend with Vite and host the Express backend as a serverless function (`/api/index.ts`) using the provided `vercel.json` routing configuration. All `/api/*` endpoints (`/api/analyze-reviews`, `/api/generate-insights`, `/api/health`) will work seamlessly.
+
 ---
 
 ## 🎓 MBA Strategic Frameworks Applied

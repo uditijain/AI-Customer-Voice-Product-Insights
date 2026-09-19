@@ -1,12 +1,37 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const PORT = 3000;
+
+export const app = express();
+app.use(express.json({ limit: '15mb' }));
+
+// CORS & Preflight handling for seamless cross-origin and preview environments
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Robust payload parsing for serverless environments
+app.use((req, res, next) => {
+  if (typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch {
+      // ignore
+    }
+  }
+  next();
+});
 
 function getGeminiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -36,17 +61,13 @@ async function callWithRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 120
   }
 }
 
-async function startServer() {
-  const app = express();
-  app.use(express.json({ limit: '15mb' }));
+// Health check
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-  // Health check
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // Endpoint 1: Analyze individual reviews in batches
-  app.post('/api/analyze-reviews', async (req, res) => {
+// Endpoint 1: Analyze individual reviews in batches
+app.post(['/api/analyze-reviews', '/analyze-reviews'], async (req, res) => {
     try {
       const { reviews } = req.body;
       if (!Array.isArray(reviews) || reviews.length === 0) {
@@ -189,7 +210,7 @@ ${JSON.stringify(
   });
 
   // Endpoint 2: Generate Business Insights, Recommended Actions, and Technology & AI Opportunities
-  app.post('/api/generate-insights', async (req, res) => {
+  app.post(['/api/generate-insights', '/generate-insights'], async (req, res) => {
     try {
       const { analyzedReviews } = req.body;
       if (!Array.isArray(analyzedReviews) || analyzedReviews.length === 0) {
@@ -449,8 +470,13 @@ Deliver:
     }
   });
 
+let serverStarted = false;
+async function startServer() {
+  if (serverStarted) return;
+  serverStarted = true;
   // Vite middleware setup
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -468,6 +494,13 @@ Deliver:
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
+
+// Only start standalone HTTP server when not running in Vercel serverless environment
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
 
 // Fallback logic in case of network or rate issues
 function generateFallbackReviewAnalysis(reviews: any[]) {
@@ -797,5 +830,3 @@ function generateFallbackInsights(analyzedReviews: any[]) {
     ],
   };
 }
-
-startServer();
